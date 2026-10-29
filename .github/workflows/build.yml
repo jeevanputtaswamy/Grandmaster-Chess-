@@ -28,13 +28,52 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Initialize and Build TWA
+      - name: Generate KeyStore and Config
         run: |
-          yes "" | bubblewrap init --manifest=https://glistening-kataifi-3da232.netlify.app/manifest.webmanifest
-          bubblewrap build --skipPwaValidation
+          keytool -genkeypair -v -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -validity 10000 -storepass password123 -keypass password123 -dname "CN=Chess, OU=Dev, O=Dev, L=City, S=State, C=US"
+          cat << 'EOF' > twa-manifest.json
+          {
+            "packageId": "com.grandmasterchess.twa",
+            "host": "glistening-kataifi-3da232.netlify.app",
+            "name": "Grandmaster Chess",
+            "launcherName": "Chess",
+            "display": "standalone",
+            "themeColor": "#000000",
+            "navigationColor": "#000000",
+            "backgroundColor": "#000000",
+            "enableNotifications": false,
+            "startUrl": "/",
+            "iconUrl": "https://glistening-kataifi-3da232.netlify.app/icon.svg",
+            "maskableIconUrl": "https://glistening-kataifi-3da232.netlify.app/icon.svg",
+            "appVersion": "1.0.0",
+            "appVersionCode": 1,
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "android"
+            },
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://glistening-kataifi-3da232.netlify.app/manifest.webmanifest",
+            "fallbackType": "customtabs",
+            "features": {},
+            "alphaDependencies": {
+              "enabled": false
+            },
+            "enableSiteSettingsShortcut": "true",
+            "isChromeOSOnly": false,
+            "isSplashScreenFadeOutEnabled": true,
+            "mupMode": false
+          }
+          EOF
+
+      - name: Build TWA APK
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: password123
+          BUBBLEWRAP_KEY_PASSWORD: password123
+        run: bubblewrap build --skipPwaValidation
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: GrandmasterChess-APK
           path: ./*.apk
+
